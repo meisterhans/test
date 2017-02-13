@@ -2,7 +2,11 @@
 
 namespace app\controllers;
 
+use app\models\Companies;
+use app\models\Data;
+use app\models\Users;
 use Yii;
+use yii\data\ActiveDataProvider;
 use yii\filters\AccessControl;
 use yii\web\Controller;
 use yii\filters\VerbFilter;
@@ -60,66 +64,66 @@ class SiteController extends Controller
      */
     public function actionIndex()
     {
-        return $this->render('index');
-    }
+        $companiesModel = new Companies();
+        $comapniesDataProvider = new ActiveDataProvider([
+            'query' => Companies::find()->orderBy(["id" => SORT_DESC]),
+            'sort' => false
+        ]);
 
-    /**
-     * Login action.
-     *
-     * @return string
-     */
-    public function actionLogin()
-    {
-        if (!Yii::$app->user->isGuest) {
-            return $this->goHome();
-        }
+        $usersModel = new Users();
+        $usersDataProvider = new ActiveDataProvider([
+            'query' => Users::find()
+                ->select('users.*, companies.name as company_name')
+                ->innerJoinWith('company')
+                ->orderBy(["id" => SORT_DESC]),
+            'sort' => false
+        ]);
 
-        $model = new LoginForm();
-        if ($model->load(Yii::$app->request->post()) && $model->login()) {
-            return $this->goBack();
-        }
-        return $this->render('login', [
-            'model' => $model,
+        $dataModel = new Users();
+        $dataDataProvider = new ActiveDataProvider([
+            'query' => Data::find()
+                ->select("companies.id as company_id, companies.name as company_name, companies.quota as company_quota, sum(amount) as total")
+                ->innerJoinWith("user")
+                ->having("sum(amount) > companies.quota")
+                ->groupBy("users.company_id")
+                ->orderBy(["companies.id" => SORT_DESC]),
+            'sort' => false
+        ]);
+
+        return $this->render('index', [
+            'companies_model' => $companiesModel,
+            'companies' => $comapniesDataProvider,
+            'users_model' => $usersModel,
+            'users' => $usersDataProvider,
+            'data_model' => $dataModel,
+            'data' => $dataDataProvider
         ]);
     }
 
-    /**
-     * Logout action.
-     *
-     * @return string
-     */
-    public function actionLogout()
+    public function actionCompany($id)
     {
-        Yii::$app->user->logout();
+        $dataModel = new Users();
+        $dataDataProvider = new ActiveDataProvider([
+            'query' => Data::find()
+                ->select('data.*, users.name as user_name')
+                ->innerJoinWith("user")
+                ->where("companies.id = :id", [
+                    'id' => $id
+                ])
+                ->orderBy(["created_at" => SORT_DESC]),
+            'sort' => false
+        ]);
 
-        return $this->goHome();
-    }
-
-    /**
-     * Displays contact page.
-     *
-     * @return string
-     */
-    public function actionContact()
-    {
-        $model = new ContactForm();
-        if ($model->load(Yii::$app->request->post()) && $model->contact(Yii::$app->params['adminEmail'])) {
-            Yii::$app->session->setFlash('contactFormSubmitted');
-
-            return $this->refresh();
-        }
-        return $this->render('contact', [
-            'model' => $model,
+        return $this->render('company', [
+            'data_model' => $dataModel,
+            'data' => $dataDataProvider
         ]);
     }
 
-    /**
-     * Displays about page.
-     *
-     * @return string
-     */
-    public function actionAbout()
+    public function actionGenerate()
     {
-        return $this->render('about');
+        Data::generateData();
+
+        return true;
     }
 }

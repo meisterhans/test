@@ -113,3 +113,35 @@ a.desc:after {
 .nav > li > form > button.logout:focus {
     outline: none;
 }
+
+.content-wrapper, .right-side, .main-footer {
+    margin-left:0px !important;
+}
+
+.grid-view-buttons {
+    float:right;
+}
+
+.form {
+    display: none;
+}
+
+.left {
+    float: left;
+}
+
+.right {
+    float: right;
+}
+
+.clear {
+    clear: both;
+}
+
+.quota .left{
+    width:68%;
+}
+
+.quota .right{
+    width:30%;
+}
